@@ -1,0 +1,157 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+# قاعدة بيانات بسيطة للسلع
+products = []
+
+# تغيير اللغة
+current_language = "ar"  # ar: العربية, fr: الفرنسية
+
+def change_language(lang):
+    global current_language
+    current_language = lang
+    update_ui()
+
+# تحديث واجهة المستخدم بناءً على اللغة
+def update_ui():
+    if current_language == "ar":
+        add_product_btn.config(text="إضافة سلعة")
+        update_stock_btn.config(text="تحديث المخزون")
+        generate_bill_btn.config(text="إصدار فاتورة")
+        view_reports_btn.config(text="عرض التقارير")
+        language_label.config(text="اختيار اللغة:")
+        arabic_btn.config(text="العربية")
+        french_btn.config(text="الفرنسية")
+    elif current_language == "fr":
+        add_product_btn.config(text="Ajouter un produit")
+        update_stock_btn.config(text="Mettre à jour le stock")
+        generate_bill_btn.config(text="Générer une facture")
+        view_reports_btn.config(text="Afficher les rapports")
+        language_label.config(text="Choisir la langue :")
+        arabic_btn.config(text="Arabe")
+        french_btn.config(text="Français")
+
+# إضافة سلعة جديدة
+def add_product():
+    product_name = simpledialog.askstring("إضافة سلعة", "اسم السلعة:" if current_language == "ar" else "Nom du produit:")
+    if product_name:
+        product_price = simpledialog.askfloat("إضافة سلعة", "سعر السلعة:" if current_language == "ar" else "Prix du produit:")
+        if product_price:
+            products.append({"name": product_name, "price": product_price, "stock": 0})
+            messagebox.showinfo("نجاح", "تمت إضافة السلعة." if current_language == "ar" else "Produit ajouté avec succès.")
+
+# تحديث المخزون
+def update_stock():
+    if not products:
+        messagebox.showwarning("تحذير", "لا توجد سلع متاحة." if current_language == "ar" else "Aucun produit disponible.")
+        return
+    product_list = [product["name"] for product in products]
+    selected_product = tk.StringVar()
+    selected_product.set(product_list[0])
+
+    def confirm_update():
+        selected_name = selected_product.get()
+        for product in products:
+            if product["name"] == selected_name:
+                new_stock = simpledialog.askinteger("تحديث المخزون", "كمية المخزون الجديدة:" if current_language == "ar" else "Nouvelle quantité en stock:")
+                if new_stock is not None:
+                    product["stock"] = new_stock
+                    messagebox.showinfo("نجاح", "تم تحديث المخزون." if current_language == "ar" else "Stock mis à jour avec succès.")
+                break
+
+    popup = tk.Toplevel(root)
+    popup.title("تحديث المخزون" if current_language == "ar" else "Mise à jour du stock")
+    label = ttk.Label(popup, text="اختر السلعة:" if current_language == "ar" else "Sélectionnez un produit:")
+    label.pack(pady=10)
+    dropdown = ttk.OptionMenu(popup, selected_product, *product_list)
+    dropdown.pack(pady=5)
+    confirm_button = ttk.Button(popup, text="تأكيد" if current_language == "ar" else "Confirmer", command=confirm_update)
+    confirm_button.pack(pady=10)
+
+# إصدار فاتورة
+def generate_bill():
+    if not products:
+        messagebox.showwarning("تحذير", "لا توجد سلع متاحة." if current_language == "ar" else "Aucun produit disponible.")
+        return
+    bill_window = tk.Toplevel(root)
+    bill_window.title("إصدار فاتورة" if current_language == "ar" else "Générer une facture")
+    
+    total_price = 0
+    cart = []
+
+    def add_to_cart(product_name):
+        nonlocal total_price
+        for product in products:
+            if product["name"] == product_name:
+                quantity = simpledialog.askinteger("إضافة إلى السلة", "الكمية:" if current_language == "ar" else "Quantité:")
+                if quantity and quantity <= product["stock"]:
+                    cart.append({"name": product_name, "quantity": quantity, "price": product["price"]})
+                    product["stock"] -= quantity
+                    total_price += product["price"] * quantity
+                    update_cart_display()
+                elif quantity > product["stock"]:
+                    messagebox.showwarning("تحذير", "الكمية غير متوفرة في المخزون." if current_language == "ar" else "La quantité n'est pas disponible en stock.")
+                break
+
+    def update_cart_display():
+        cart_text.delete(1.0, tk.END)
+        cart_text.insert(tk.END, "السلة:\n" if current_language == "ar" else "Panier:\n")
+        for item in cart:
+            cart_text.insert(tk.END, f"{item['name']} x{item['quantity']} = {item['price'] * item['quantity']}\n")
+        cart_text.insert(tk.END, "\nالمجموع: {}\n".format(total_price) if current_language == "ar" else "\nTotal: {}\n".format(total_price))
+
+    product_list = [product["name"] for product in products]
+    selected_product = tk.StringVar()
+    selected_product.set(product_list[0])
+
+    label = ttk.Label(bill_window, text="اختر السلعة:" if current_language == "ar" else "Sélectionnez un produit:")
+    label.pack(pady=10)
+    dropdown = ttk.OptionMenu(bill_window, selected_product, *product_list)
+    dropdown.pack(pady=5)
+    add_button = ttk.Button(bill_window, text="إضافة إلى السلة" if current_language == "ar" else "Ajouter au panier", command=lambda: add_to_cart(selected_product.get()))
+    add_button.pack(pady=5)
+
+    cart_text = tk.Text(bill_window, height=10, width=40)
+    cart_text.pack(pady=10)
+
+    update_cart_display()
+
+# عرض التقارير
+def view_reports():
+    report_window = tk.Toplevel(root)
+    report_window.title("عرض التقارير" if current_language == "ar" else "Afficher les rapports")
+    report_text = tk.Text(report_window, height=20, width=60)
+    report_text.pack(pady=10)
+    report_text.insert(tk.END, "التقارير:\n" if current_language == "ar" else "Rapports:\n")
+    for product in products:
+        report_text.insert(tk.END, f"اسم السلعة: {product['name']}, السعر: {product['price']}, المخزون: {product['stock']}\n" if current_language == "ar" else f"Nom du produit: {product['name']}, Prix: {product['price']}, Stock: {product['stock']}\n")
+
+# إنشاء نافذة رئيسية
+root = tk.Tk()
+root.title("نظام إدارة المتجر" if current_language == "ar" else "Système de gestion du magasin")
+
+# أزرار الوظائف الرئيسية
+add_product_btn = ttk.Button(root, text="إضافة سلعة", command=add_product)
+add_product_btn.pack(pady=10)
+
+update_stock_btn = ttk.Button(root, text="تحديث المخزون", command=update_stock)
+update_stock_btn.pack(pady=10)
+
+generate_bill_btn = ttk.Button(root, text="إصدار فاتورة", command=generate_bill)
+generate_bill_btn.pack(pady=10)
+
+view_reports_btn = ttk.Button(root, text="عرض التقارير", command=view_reports)
+view_reports_btn.pack(pady=10)
+
+# اختيار اللغة
+language_label = ttk.Label(root, text="اختيار اللغة:")
+language_label.pack(pady=10)
+
+arabic_btn = ttk.Button(root, text="العربية", command=lambda: change_language("ar"))
+arabic_btn.pack(side=tk.LEFT, padx=5)
+
+french_btn = ttk.Button(root, text="الفرنسية", command=lambda: change_language("fr"))
+french_btn.pack(side=tk.RIGHT, padx=5)
+
+# تشغيل البرنامج
+root.mainloop()
